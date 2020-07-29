@@ -22,12 +22,12 @@ class TransactionsRepository extends Repository<Transaction> {
     );
 
     const income = incomeTransactions.reduce(
-      (sum, current) => sum + current.value,
+      (sum, current) => sum + Number(current.value),
       0,
     );
 
     const outcome = outcomeTransactions.reduce(
-      (sum, current) => sum + current.value,
+      (sum, current) => sum + Number(current.value),
       0,
     );
 

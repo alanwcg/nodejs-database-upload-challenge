@@ -10,7 +10,7 @@ interface Request {
   title: string;
   value: number;
   type: 'income' | 'outcome';
-  categoryTitle: string;
+  category: string;
 }
 
 class CreateTransactionService {
@@ -18,34 +18,26 @@ class CreateTransactionService {
     title,
     value,
     type,
-    categoryTitle,
+    category,
   }: Request): Promise<Transaction> {
     const categoriesRepository = getRepository(Category);
 
     const transactionsRepository = getCustomRepository(TransactionsRepository);
 
-    const categoryTitleArray = categoryTitle.split(' ');
-
-    const formattedCategoryTitleArray = categoryTitleArray.map(
-      t => t[0].toUpperCase() + t.substr(1).toLowerCase(),
-    );
-
-    const formattedCategoryTitle = formattedCategoryTitleArray.join(' ');
-
-    const category = await categoriesRepository.findOne({
-      where: { title: formattedCategoryTitle },
+    const findCategory = await categoriesRepository.findOne({
+      where: { title: category },
     });
 
-    let categoryId = '';
+    let transactionCategory = null;
 
-    if (!category) {
-      const { identifiers } = await categoriesRepository.insert({
-        title: formattedCategoryTitle,
+    if (!findCategory) {
+      transactionCategory = categoriesRepository.create({ title: category });
+
+      await categoriesRepository.insert({
+        title: category,
       });
-
-      categoryId = identifiers[0].id;
     } else {
-      categoryId = category.id;
+      transactionCategory = findCategory;
     }
 
     const formattedType = type.toLowerCase();
@@ -66,8 +58,7 @@ class CreateTransactionService {
       title,
       value,
       type: formattedType,
-      category_id: categoryId,
-      category: formattedCategoryTitle,
+      category: transactionCategory,
     });
 
     await transactionsRepository.save(transaction);
