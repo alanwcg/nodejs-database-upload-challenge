@@ -20,50 +20,37 @@ class CreateTransactionService {
     type,
     category,
   }: Request): Promise<Transaction> {
-    const categoriesRepository = getRepository(Category);
-
     const transactionsRepository = getCustomRepository(TransactionsRepository);
-
-    const findCategory = await categoriesRepository.findOne({
-      where: { title: category },
-    });
-
-    let transactionCategory = null;
-
-    if (!findCategory) {
-      transactionCategory = categoriesRepository.create({ title: category });
-
-      await categoriesRepository.insert({
-        title: category,
-      });
-    } else {
-      transactionCategory = findCategory;
-    }
-
-    const formattedType = type.toLowerCase();
-
-    if (formattedType !== 'income' && formattedType !== 'outcome') {
-      throw new AppError(
-        'Invalid transaction type! Transactions can only have "income" or "outcome" types.',
-      );
-    }
+    const categoriesRepository = getRepository(Category);
 
     const { total } = await transactionsRepository.getBalance();
 
-    if (formattedType === 'outcome' && value > total) {
+    if (type === 'outcome' && value > total) {
       throw new AppError('Insufficient funds to complete this transaction!');
+    }
+
+    let transactionCategory = await categoriesRepository.findOne({
+      where: {
+        title: category,
+      },
+    });
+
+    if (!transactionCategory) {
+      transactionCategory = categoriesRepository.create({
+        title: category,
+      });
+
+      await categoriesRepository.save(transactionCategory);
     }
 
     const transaction = transactionsRepository.create({
       title,
       value,
-      type: formattedType,
+      type,
       category: transactionCategory,
     });
 
     await transactionsRepository.save(transaction);
-
-    delete transaction.category_id;
 
     return transaction;
   }
