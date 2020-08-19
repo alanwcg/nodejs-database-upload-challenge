@@ -70,15 +70,32 @@ class ImportTransactionsService {
 
     const finalCategories = [...newCategories, ...existentCategories];
 
+    const newTransactions = transactions.map(transaction => ({
+      title: transaction.title,
+      type: transaction.type,
+      value: transaction.value,
+      category: finalCategories.find(
+        category => category.title === transaction.category,
+      ),
+    }));
+
+    const { total } = await transactionsRepository.getBalance();
+    let balance = Number(total);
+
     const createdTransactions = transactionsRepository.create(
-      transactions.map(transaction => ({
-        title: transaction.title,
-        type: transaction.type,
-        value: transaction.value,
-        category: finalCategories.find(
-          category => category.title === transaction.category,
-        ),
-      })),
+      newTransactions.filter(transaction => {
+        if (transaction.type === 'outcome' && transaction.value > balance) {
+          return false;
+        }
+
+        if (transaction.type === 'outcome') {
+          balance -= Number(transaction.value);
+        } else {
+          balance += Number(transaction.value);
+        }
+
+        return true;
+      }),
     );
 
     await transactionsRepository.save(createdTransactions);
